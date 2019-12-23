@@ -1,0 +1,4 @@
+.stack-work/
+newsletter.cabal
+build/
+*~
