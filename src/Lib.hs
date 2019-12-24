@@ -1,9 +1,9 @@
+{-# LANGUAGE DeriveGeneric  #-}
 module Lib where
 
+import Aws.Lambda
 import GHC.Generics
 import Data.Aeson
-
-import Aws.Lambda
 
 data Person = Person
   { personName :: String
