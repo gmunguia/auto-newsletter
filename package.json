@@ -1,0 +1,23 @@
+{
+  "name": "newsletter",
+  "private": true,
+  "scripts": {
+    "cdk:bootstrap": "cdk bootstrap",
+    "cdk:deploy": "cdk deploy newsletter",
+    "deploy:development": "make && AWS_PROFILE=newsletter_development yarn cdk:deploy"
+  },
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Gerardo Munguia <gerardomunguiahoyo@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@aws-cdk/aws-lambda": "^1.17.1",
+    "@aws-cdk/aws-lambda-event-sources": "^1.17.1",
+    "@aws-cdk/aws-sqs": "^1.17.1",
+    "@aws-cdk/core": "^1.17.1",
+    "aws-cdk": "^1.17.1",
+    "dotenv": "^8.2.0",
+    "eslint": "^6.7.0",
+    "prettier": "^1.19.1"
+  }
+}

@@ -3,3 +3,5 @@ newsletter.cabal
 build/
 *~
 stack.yaml.lock
+node_modules/
+cdk.out/
