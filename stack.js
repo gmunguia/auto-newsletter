@@ -15,6 +15,7 @@ class NewsletterStack extends cdk.Stack {
       code: lambda.Code.fromAsset("build/function.zip"),
       runtime: lambda.Runtime.PROVIDED,
       handler: "src/Lib.handler",
+      timeout: cdk.Duration.seconds(10),
       layers: [haskellRuntime]
     });
   }
