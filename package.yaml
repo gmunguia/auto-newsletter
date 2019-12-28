@@ -13,8 +13,13 @@ dependencies:
   - aws-lambda-haskell-runtime >= 2.0.1
   - aeson
   - http-conduit
-  - scientific >= 0.3.6.2
-  - vector >= 0.12.0.3
+  - scientific >= 0.3.6
+  - vector >= 0.12.0
+  - amazonka
+  - amazonka-core
+  - amazonka-sqs
+  - text >= 1.2.3
+  - lens
 
 library:
   source-dirs: src
