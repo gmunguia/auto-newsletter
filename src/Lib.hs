@@ -6,10 +6,14 @@ import GHC.Generics
 import Data.Aeson
 import Data.Aeson.Types
 import Network.HTTP.Simple
+import Control.Monad (void)
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Scientific as Sci
 import qualified Network.AWS.SQS as SQS
+import qualified Network.AWS.Types as AWS
+import Control.Monad.Trans.AWS 
+  (newEnv, Credentials(Discover), runResourceT, runAWST, within, Region(Ireland), send, AWST)
 import qualified Control.Lens as L
 
 data Story = Story { storyId :: Int } deriving (Show)
@@ -29,9 +33,6 @@ instance FromJSON Stories where
 join :: String -> [String] -> String
 join _ [] = ""
 join comma (x:xs) = x ++ comma ++ join comma xs
-
-wrap x = [x]
-unwrap (x:[]) = x
 
 sendBatchToSqs :: Stories -> IO SQS.SendMessageBatch
 sendBatchToSqs (Stories ids) =
@@ -54,8 +55,15 @@ sendToSqs (Story id) = do
 sendAllToSqs :: Stories -> IO [SQS.SendMessage]
 sendAllToSqs ss = traverse sendToSqs $ stories ss
 
-ignore :: a -> ()
-ignore _ = ()
+runRequest :: SQS.SendMessage -> IO ()
+runRequest req = do
+  env <- newEnv Discover
+  runResourceT . runAWST env . within Ireland $ void $ send req
+
+runRequests :: [SQS.SendMessage] -> IO ()
+runRequests reqs = do
+  env <- newEnv Discover
+  runResourceT . runAWST env . within Ireland $ void $ traverse send reqs
 
 handler :: Value -> Context -> IO (Either String ())
 handler _ context =
@@ -63,6 +71,6 @@ handler _ context =
   >>= httpJSON
   >>= return . getResponseBody
   >>= return . parseEither parseJSON
-  >>= return . fmap (Stories . take 10 . stories)
+  >>= return . fmap (Stories . take 10 . stories) -- testing with a single msg batch for now
   >>= traverse sendAllToSqs
-  >>= return . fmap ignore
+  >>= traverse runRequests
