@@ -11,4 +11,4 @@ phases:
       - cd build && zip function.zip bootstrap && rm bootstrap && cd -
 artifacts:
   files:
-    - "**/*"
+    - "build/function.zip"
