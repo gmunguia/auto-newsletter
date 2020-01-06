@@ -6,9 +6,15 @@ phases:
       - mkdir -p build
       - rm -rf ./build/*
       - stack clean
-      - stack build
+      - stack build --no-terminal
       - cp `stack path --local-install-root`/bin/bootstrap build
       - cd build && zip function.zip bootstrap && rm bootstrap && cd -
+
+cache:
+  paths:
+    - "/root/.stack/**/*"
+    - ".stack-work/**/*"
+
 artifacts:
   files:
     - "build/function.zip"
