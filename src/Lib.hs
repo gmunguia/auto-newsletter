@@ -8,6 +8,7 @@ import Data.Aeson.Types
 import Network.HTTP.Simple
 import Control.Monad (void)
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import qualified Data.Vector as V
 import qualified Data.Scientific as Sci
 import qualified Network.AWS.SQS as SQS
@@ -37,15 +38,20 @@ join comma (x:xs) = x ++ comma ++ join comma xs
 sendBatchToSqs :: Stories -> IO SQS.SendMessageBatch
 sendBatchToSqs (Stories ids) =
   let
-    storyToEntry = (\s -> let id = (T.pack . show) s in SQS.sendMessageBatchRequestEntry id id) :: Story -> SQS.SendMessageBatchRequestEntry
+    storyToEntry = (\s -> 
+      let id = (T.pack . show) $ storyId s
+      in SQS.sendMessageBatchRequestEntry id id)
     entries = storyToEntry <$> ids :: [SQS.SendMessageBatchRequestEntry]
   in do
     url <- getEnv "QUEUE_URL"
+    traverse T.putStrLn $
+      (\entry -> "sending entry: " <> T.pack (show entry)) <$> entries
     return $ L.set SQS.smbEntries entries $ SQS.sendMessageBatch (T.pack url)
 
 chunk :: Int -> [a] -> [[a]]
 chunk _ [] = []
-chunk n xs = let (firstN, rest) = splitAt n xs in [firstN] ++ chunk n rest
+chunk n xs = let (firstN, rest) = splitAt n xs 
+              in [firstN] ++ chunk n rest
 
 sendToSqs :: Story -> IO SQS.SendMessage
 sendToSqs (Story id) = do
@@ -65,12 +71,20 @@ runRequests reqs = do
   env <- newEnv Discover
   runResourceT . runAWST env . within Ireland $ void $ traverse send reqs
 
+sendChunkToSQS :: Stories -> IO ()
+sendChunkToSQS chunk = do
+  env <- newEnv Discover
+  req <- sendBatchToSqs chunk
+  runResourceT . runAWST env . within Ireland $ void $ send req
+
+sendChunksToSQS :: [Stories] -> IO ()
+sendChunksToSQS = void . traverse sendChunkToSQS
+
 handler :: Value -> Context -> IO (Either String ())
-handler _ context =
-  parseRequest "https://hacker-news.firebaseio.com/v0/newstories.json"
-  >>= httpJSON
-  >>= return . getResponseBody
-  >>= return . parseEither parseJSON
-  >>= return . fmap (Stories . take 10 . stories) -- testing with a single msg batch for now
-  >>= traverse sendAllToSqs
-  >>= traverse runRequests
+handler _ context = do
+  req <- parseRequest "https://hacker-news.firebaseio.com/v0/newstories.json"
+  res <- httpJSON req
+  let body = getResponseBody res
+  let json = parseEither parseJSON body
+  let chunks = fmap (fmap Stories . chunk 10 . stories) json
+  traverse sendChunksToSQS chunks
